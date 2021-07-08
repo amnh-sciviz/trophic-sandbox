@@ -15,14 +15,27 @@ var App = (function() {
       edgePositiveColor: 0x2d7517,
       edgeNegativeColor: 0x751717,
       edgeGap: 16,
-      animationSpeed: 1000 // in milliseconds
+      hoverOpacity: 0.2,
+      nodeRadius: 0.06, // as a percent of min(w, h)
+      animationSpeed: 2000 // in milliseconds
     };
     this.opt = _.extend({}, defaults, config);
     this.init();
   }
 
+  function lerpColor(hex, hexTarget, t){
+    var rgb = PIXI.utils.hex2rgb(hex);
+    var rgbTarget = PIXI.utils.hex2rgb(hexTarget);
+    var newRGB = [1, 1, 1];
+    _.each(rgb, function(c, i){
+      newRGB[i] = MathUtil.lerp(c, rgbTarget[i], t);
+    });
+    return PIXI.utils.rgb2hex(newRGB);
+  }
+
   App.prototype.init = function(){
     var _this = this;
+    var opt = this.opt;
 
     this.loadCanvas();
     this.loadGraphics();
@@ -57,18 +70,34 @@ var App = (function() {
     var renderer = app.renderer;
     var w = renderer.width;
     var h = renderer.height;
+    var nodeRadius = Math.round(Math.min(w, h) * this.opt.nodeRadius);
+
+    var lerpAmount = 1.0 - this.opt.hoverOpacity;
+    var brightenedNodeFillColor = lerpColor(opt.nodeFillColor, opt.bgColor, lerpAmount);
+    var brightenedNodeLineColor = lerpColor(opt.nodeLineColor, opt.bgColor, lerpAmount);
+    var brightenedEdgePositiveColor = lerpColor(opt.edgePositiveColor, opt.bgColor, lerpAmount);
+    var brightenedEdgeNegativeColor = lerpColor(opt.edgeNegativeColor, opt.bgColor, lerpAmount);
 
     var nodeContainer = new PIXI.Container();
     var nodes = _.map(this.opt.nodes, function(node, i){
       node.index = i;
       node.scale = 1.0;
+      node.opacity = 1.0;
       node.lineColor = opt.nodeLineColor;
       node.fillColor = opt.nodeFillColor;
+      node.baseLineColor = opt.nodeLineColor;
+      node.baseFillColor = opt.nodeFillColor;
+      node.hoverLineColor = brightenedNodeLineColor;
+      node.hoverFillColor = brightenedNodeFillColor;
       node.graphicsX = node.x * w;
       node.graphicsY = node.y * h;
       node.graphics = new PIXI.Graphics();
       node.graphics.x = node.graphicsX;
       node.graphics.y = node.graphicsY;
+      node.graphics.interactive = true;
+      node.graphics.hitArea = new PIXI.Rectangle(0, 0, nodeRadius*2, nodeRadius*2);
+      node.graphics.mouseout = function(e) { _this.onMouseout(); }
+      node.graphics.mouseover = function(e) { _this.onMouseover(i); }
       nodeContainer.addChild(node.graphics);
       return node;
     });
@@ -77,10 +106,14 @@ var App = (function() {
     var edges = _.map(this.opt.edges, function(edge, i){
       var nodeFrom = _.find(nodes, function(node){ return node.id === edge.from; });
       var nodeTo = _.find(nodes, function(node){ return node.id === edge.to; });
+      edge.index = i;
       edge.fromIndex = nodeFrom.index;
       edge.toIndex = nodeTo.index;
       edge.thickness = opt.edgeThickness;
+      edge.opacity = 1;
       edge.color = edge.type === 'positive' ? opt.edgePositiveColor : opt.edgeNegativeColor;
+      edge.baseColor = edge.color;
+      edge.hoverColor = edge.type === 'positive' ? brightenedEdgePositiveColor : brightenedEdgeNegativeColor;
       edge.gap = opt.edgeGap;
       edge.triangleHeight = edge.thickness * Math.sqrt(3) / 2;
       edge.graphics = new PIXI.Graphics();
@@ -107,6 +140,47 @@ var App = (function() {
 
   };
 
+  App.prototype.onMouseout = function(){
+    var _this = this;
+
+    this.nodes = _.map(this.nodes, function(node, i){
+      node.fillColor = node.baseFillColor;
+      node.lineColor = node.baseLineColor;
+      return node;
+    });
+
+    this.edges = _.map(this.edges, function(edge, i){
+      edge.color = edge.baseColor;
+      return edge;
+    });
+  };
+
+  App.prototype.onMouseover = function(nodeIndex){
+    var _this = this;
+    var opt = this.opt;
+
+    this.nodes = _.map(this.nodes, function(node, i){
+      node.fillColor = node.hoverFillColor;
+      node.lineColor = node.hoverLineColor;
+      return node;
+    });
+
+    this.nodes[nodeIndex].fillColor = opt.nodeFillColor;
+    this.nodes[nodeIndex].lineColor = opt.nodeLineColor;
+
+    this.edges = _.map(this.edges, function(edge, i){
+      edge.color = edge.fromIndex === nodeIndex || edge.toIndex === nodeIndex ? edge.baseColor : edge.hoverColor;
+      var otherNodeIndex = -1;
+      if (edge.fromIndex === nodeIndex) otherNodeIndex = edge.toIndex;
+      else if (edge.toIndex === nodeIndex) otherNodeIndex = edge.fromIndex
+      if (otherNodeIndex >= 0) {
+        _this.nodes[otherNodeIndex].fillColor = opt.nodeFillColor;
+        _this.nodes[otherNodeIndex].lineColor = opt.nodeLineColor;
+      }
+      return edge;
+    });
+  };
+
   App.prototype.render = function(delta){
     var now = Date.now();
     var t = (now % this.opt.animationSpeed) / this.opt.animationSpeed;
@@ -114,13 +188,17 @@ var App = (function() {
     var renderer = this.pixiApp.renderer;
     var w = renderer.width;
     var h = renderer.height;
-    var nodeRadius = Math.round(Math.min(w, h) * 0.075);
+    var nodeRadius = Math.round(Math.min(w, h) * this.opt.nodeRadius);
 
     // calculate node size and positions
     var nodes = _.map(this.nodes, function(node, i){
       node.graphicsX = node.x * w;
       node.graphicsY = node.y * h;
       node.radius = nodeRadius * node.scale;
+      node.graphics.hitArea.width = node.radius * 2;
+      node.graphics.hitArea.height = node.radius * 2;
+      node.graphics.hitArea.x = -node.radius;
+      node.graphics.hitArea.y = -node.radius;
       return node;
     });
 
