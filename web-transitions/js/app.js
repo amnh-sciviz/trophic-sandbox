@@ -97,7 +97,7 @@ var App = (function() {
       node.graphics.interactive = true;
       node.graphics.hitArea = new PIXI.Rectangle(0, 0, nodeRadius*2, nodeRadius*2);
       node.graphics.mouseout = function(e) { _this.onMouseout(); }
-      node.graphics.mouseover = function(e) { _this.onMouseover(i); }
+      node.graphics.mouseover = function(e) { _this.onMouseoverNode(i); }
       nodeContainer.addChild(node.graphics);
       return node;
     });
@@ -117,8 +117,12 @@ var App = (function() {
       edge.gap = opt.edgeGap;
       edge.triangleHeight = edge.thickness * Math.sqrt(3) / 2;
       edge.graphics = new PIXI.Graphics();
+      edge.graphics.interactive = true;
+      edge.graphics.hitArea = new PIXI.Rectangle(0, 0, 0, 0);
       edge.graphics.x = nodeFrom.graphicsX;
       edge.graphics.y = nodeFrom.graphicsY;
+      edge.graphics.mouseover = function(e) { _this.onMouseoverEdge(i); }
+      edge.graphics.mouseout = function(e) { _this.onMouseout(); }
       edgeContainer.addChild(edge.graphics);
       return edge;
     });
@@ -155,7 +159,29 @@ var App = (function() {
     });
   };
 
-  App.prototype.onMouseover = function(nodeIndex){
+  App.prototype.onMouseoverEdge = function(edgeIndex){
+    var _this = this;
+    var opt = this.opt;
+    
+    this.nodes = _.map(this.nodes, function(node, i){
+      node.fillColor = node.hoverFillColor;
+      node.lineColor = node.hoverLineColor;
+      return node;
+    });
+
+    this.edges = _.map(this.edges, function(edge, i){
+      edge.color = i === edgeIndex ? edge.baseColor : edge.hoverColor;
+      if (i === edgeIndex) {
+        _this.nodes[edge.fromIndex].fillColor = opt.nodeFillColor;
+        _this.nodes[edge.fromIndex].lineColor = opt.nodeLineColor;
+        _this.nodes[edge.toIndex].fillColor = opt.nodeFillColor;
+        _this.nodes[edge.toIndex].lineColor = opt.nodeLineColor;
+      }
+      return edge;
+    });
+  };
+
+  App.prototype.onMouseoverNode = function(nodeIndex){
     var _this = this;
     var opt = this.opt;
 
@@ -236,6 +262,8 @@ var App = (function() {
       edge.graphics.endFill();
       edge.graphics.x = nodeFrom.graphicsX;
       edge.graphics.y = nodeFrom.graphicsY;
+      edge.graphics.hitArea.width = distance;
+      edge.graphics.hitArea.height = halfThickness;
       edge.graphics.rotation = radians;
     });
 
