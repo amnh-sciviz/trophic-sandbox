@@ -1,0 +1,10 @@
+{
+  "name": "trophic-sandbox",
+  "description": "Trophic Web Sandbox",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "devDependencies": {
+    "express": "^4.17.1"
+  }
+}
