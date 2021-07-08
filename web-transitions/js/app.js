@@ -9,11 +9,13 @@ var App = (function() {
       edges: [],
       states: [],
       bgColor: 0xe3c05f,
-      nodeFillColor: 0xeeeeee,
+      nodeFillColor: 0xfce8b1,
       nodeLineColor: 0x111111,
-      edgeThickness: 10,
+      edgeThickness: 16,
       edgePositiveColor: 0x2d7517,
-      edgeNegativeColor: 0x751717
+      edgeNegativeColor: 0x751717,
+      edgeGap: 16,
+      animationSpeed: 1000 // in milliseconds
     };
     this.opt = _.extend({}, defaults, config);
     this.init();
@@ -23,7 +25,7 @@ var App = (function() {
     var _this = this;
 
     this.loadCanvas();
-    this.loadNodes();
+    this.loadGraphics();
     this.loadListeners();
 
     this.pixiApp.ticker.add((delta) => {
@@ -47,12 +49,7 @@ var App = (function() {
     this.pixiApp = app;
   };
 
-  App.prototype.loadListeners = function(){
-    var _this = this;
-
-  };
-
-  App.prototype.loadNodes = function(){
+  App.prototype.loadGraphics = function(){
     var _this = this;
     var opt = this.opt;
 
@@ -60,7 +57,6 @@ var App = (function() {
     var renderer = app.renderer;
     var w = renderer.width;
     var h = renderer.height;
-    var nodeRadius = Math.round(Math.min(w, h) * 0.075);
 
     var nodeContainer = new PIXI.Container();
     var nodes = _.map(this.opt.nodes, function(node, i){
@@ -68,8 +64,6 @@ var App = (function() {
       node.scale = 1.0;
       node.lineColor = opt.nodeLineColor;
       node.fillColor = opt.nodeFillColor;
-      node.baseRadius = nodeRadius;
-      node.radius = nodeRadius * node.scale;
       node.graphicsX = node.x * w;
       node.graphicsY = node.y * h;
       node.graphics = new PIXI.Graphics();
@@ -87,6 +81,8 @@ var App = (function() {
       edge.toIndex = nodeTo.index;
       edge.thickness = opt.edgeThickness;
       edge.color = edge.type === 'positive' ? opt.edgePositiveColor : opt.edgeNegativeColor;
+      edge.gap = opt.edgeGap;
+      edge.triangleHeight = edge.thickness * Math.sqrt(3) / 2;
       edge.graphics = new PIXI.Graphics();
       edge.graphics.x = nodeFrom.graphicsX;
       edge.graphics.y = nodeFrom.graphicsY;
@@ -106,18 +102,25 @@ var App = (function() {
 
   };
 
+  App.prototype.loadListeners = function(){
+    var _this = this;
+
+  };
+
   App.prototype.render = function(delta){
-    var t = Date.now();
+    var now = Date.now();
+    var t = (now % this.opt.animationSpeed) / this.opt.animationSpeed;
 
     var renderer = this.pixiApp.renderer;
     var w = renderer.width;
     var h = renderer.height;
+    var nodeRadius = Math.round(Math.min(w, h) * 0.075);
 
     // calculate node size and positions
     var nodes = _.map(this.nodes, function(node, i){
       node.graphicsX = node.x * w;
       node.graphicsY = node.y * h;
-      node.radius = node.baseRadius * node.scale;
+      node.radius = nodeRadius * node.scale;
       return node;
     });
 
@@ -128,10 +131,33 @@ var App = (function() {
       var distance = MathUtil.distance(nodeFrom.graphicsX, nodeFrom.graphicsY, nodeTo.graphicsX, nodeTo.graphicsY);
       var radians = MathUtil.angleBetween(nodeFrom.graphicsX, nodeFrom.graphicsY, nodeTo.graphicsX, nodeTo.graphicsY);
 
+      var segmentWidth = edge.thickness + edge.gap;
+      var segments = Math.round(distance / segmentWidth);
+      var halfThickness = edge.thickness * 0.5;
+      var quarterThickness = halfThickness * 0.5;
+
       edge.graphics.clear();
       edge.graphics.beginFill(edge.color, 1);
-      edge.graphics.drawRect(0, 0, distance, edge.thickness);
+      _.times(segments, function(i){
+        var offsetX = segmentWidth * i + t * segmentWidth;
+        // draw pluses
+        if (edge.type === 'positive') {
+          edge.graphics.drawRect(offsetX, quarterThickness, edge.thickness, halfThickness);
+          edge.graphics.drawRect(offsetX+quarterThickness, 0, halfThickness, edge.thickness);
+        // draw arrows
+        } else {
+          var path = [
+            offsetX, 0,
+            offsetX, edge.thickness,
+            offsetX + edge.triangleHeight, edge.thickness * 0.5
+          ];
+          edge.graphics.drawPolygon(path);
+        }
+      });
+      // edge.graphics.drawRect(0, 0, distance, edge.thickness);
       edge.graphics.endFill();
+      edge.graphics.x = nodeFrom.graphicsX;
+      edge.graphics.y = nodeFrom.graphicsY;
       edge.graphics.rotation = radians;
     });
 
