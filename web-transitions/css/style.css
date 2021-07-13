@@ -8,7 +8,40 @@ body {
 .app {
   position: absolute;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 100px);
   top: 0;
   left: 0;
+}
+
+.menu {
+  position: absolute;
+  width: 100%;
+  height: 100px;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.menu button {
+  border: 2px solid black;
+  margin: 0 10px;
+  color: black;
+  padding: 1rem 2rem;
+  font-size: 2rem;
+  background: #a2dc95;
+  cursor: pointer;
+}
+.menu button:hover,
+.menu button.active {
+  color: white;
+  background: #123a09;
+}
+.menu button[disabled] {
+  opacity: 0.1;
+  cursor: default;
+}
+.menu button[disabled]:hover {
+  background: #a2dc95;
+  color: black;
 }
