@@ -308,12 +308,13 @@ var App = (function() {
       var nodeFrom = nodes[edge.fromIndex];
       var nodeTo = nodes[edge.toIndex];
 
-      if (nodeFrom.opacity < 0.1 || nodeTo.opacity < 0.1 || nodeFrom.radius <= 1 || nodeTo.radius <= 1) {
+      if (nodeFrom.opacity < 0.1 || nodeTo.opacity < 0.1 || nodeFrom.radius < 1 || nodeTo.radius < 1) {
         edge.graphics.clear();
         edge.graphics.hitArea.width = 0;
         edge.graphics.hitArea.height = 0;
         return;
       }
+      var opacity = Math.min(edge.opacity, nodeFrom.scale, nodeTo.scale);
       var distance = MathUtil.distance(nodeFrom.graphicsX, nodeFrom.graphicsY, nodeTo.graphicsX, nodeTo.graphicsY);
       var radians = MathUtil.angleBetween(nodeFrom.graphicsX, nodeFrom.graphicsY, nodeTo.graphicsX, nodeTo.graphicsY);
       var segmentWidth = edge.thickness + edge.gap;
@@ -322,7 +323,7 @@ var App = (function() {
       var quarterThickness = halfThickness * 0.5;
 
       edge.graphics.clear();
-      edge.graphics.beginFill(edge.color, edge.opacity);
+      edge.graphics.beginFill(edge.color, opacity);
       _.times(segments, function(i){
         var offsetX = segmentWidth * i + t * segmentWidth;
         // draw pluses
