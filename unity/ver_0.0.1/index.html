@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>TrophicWeb_Prototype_0.0.1</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body style="text-align: center">
+    <div id="unity-container" class="unity-desktop">
+      <canvas id="unity-canvas"></canvas>
+    </div>
+    <script src="Build/TW_ver5_wMock013_StreamingAssets.loader.js"></script>
+    <script>
+      createUnityInstance(document.querySelector("#unity-canvas"), {
+        dataUrl: "Build/TW_ver5_wMock013_StreamingAssets.data",
+        frameworkUrl: "Build/TW_ver5_wMock013_StreamingAssets.framework.js",
+        codeUrl: "Build/TW_ver5_wMock013_StreamingAssets.wasm",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "TrophicWeb_0.1",
+        productVersion: "0.1",
+        // matchWebGLToCanvasSize: false, // Uncomment this to separately control WebGL canvas render size and DOM element size.
+        // devicePixelRatio: 1, // Uncomment this to override low DPI rendering on high DPI displays.
+      });
+    </script>
+  </body>
+</html>
